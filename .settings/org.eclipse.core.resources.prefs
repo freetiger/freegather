@@ -1,0 +1,12 @@
+eclipse.preferences.version=1
+encoding//src/freegather/urls.py=utf-8
+encoding//src/gather/job/admin.py=utf-8
+encoding//src/gather/job/models.py=utf-8
+encoding//src/gather/job/urls.py=utf-8
+encoding//src/gather/job/views.py=utf-8
+encoding//src/gather/page/urls.py=utf-8
+encoding//src/gather/page/views.py=utf-8
+encoding//src/gather/rule/adminx.py=utf-8
+encoding//src/gather/rule/models.py=utf-8
+encoding//src/gather/script/grabber.py=utf-8
+encoding//src/gather/script/utils.py=utf-8

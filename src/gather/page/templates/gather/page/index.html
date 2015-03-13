@@ -1,0 +1,61 @@
+<html>
+<head>
+    <title>执行抓取任务</title>
+    <script type="text/javascript">
+		  function getSelectedContents(){
+		    if (frames["gatherFrame"].window.getSelection) { //chrome,firefox,opera
+		    	if(frames["gatherFrame"].window.getSelection().rangeCount>0) {
+			        var range=frames["gatherFrame"].window.getSelection().getRangeAt(0);
+			        var container = frames["gatherFrame"].document.createElement('div');
+			        container.appendChild(range.cloneContents());
+			        return container.innerHTML;
+			        //return window.getSelection(); //只复制文本	
+		    	}else {
+		    		return "";
+		    	}
+		    }else if (frames["gatherFrame"].document.getSelection) { //其他
+		    	if(frames["gatherFrame"].window.getSelection().rangeCount>0) {
+			        var range=frames["gatherFrame"].window.getSelection().getRangeAt(0);
+			        var container = frames["gatherFrame"].document.createElement('div');
+			        container.appendChild(range.cloneContents());
+			        return container.innerHTML;
+			        //return document.getSelection(); //只复制文本
+		    	}else {
+		    		return "";
+		    	}
+		    }else if (frames["gatherFrame"].document.selection) { //IE特有的
+		    	if(frames["gatherFrame"].document.selection.createRange().htmlText.length>0) {
+			        return frames["gatherFrame"].document.selection.createRange().htmlText;
+			        //return document.selection.createRange().text; //只复制文本	
+		    	}else {
+		    		return "";
+		    	}
+		    }else {
+		    	return "";
+		    }
+		}
+		  
+		function adjustIframeSrc() {
+			var gatherFrame = document.getElementById("gatherFrame");
+			param_index = gatherFrame.src.indexOf("?selectedContents=");
+			if(param_index<=0) {
+				gatherFrame.src=gatherFrame.src+"?selectedContents="+escape(getSelectedContents());
+			}else {
+				gatherFrame.src=gatherFrame.src.substring(0, param_index)+"?selectedContents="+escape(getSelectedContents());
+			}
+			alert(getSelectedContents());
+		}
+	</script>
+</head>
+<body  style="overflow:hidden">
+	<button type="button" onclick='alert(getSelectedContents());'>selected</button>
+	<button type="button" onclick='adjustIframeSrc();'>adjustIframeSrc</button>
+    <form action="" method="post">
+        <input type="text" value="{{ tgt_website }}" name="tgt_website" id="tgt_website">
+        <input type="submit" value="Submit">
+    </form>
+    
+    <Iframe id="gatherFrame"  name="gatherFrame" scrolling="yes" noresize="" border="0" height="100%" width="100%" src="{{ gatherFrame_src }}"> 
+	</Iframe> 
+</body>
+</html>
