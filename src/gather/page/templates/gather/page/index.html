@@ -38,6 +38,7 @@
 		function adjustIframeSrc() {
 			var gatherFrame = document.getElementById("gatherFrame");
 			param_index = gatherFrame.src.indexOf("?selectedContents=");
+			//依据getSelectedContents的值来做什么操作：定位选择的元素、确定调整的元素
 			if(param_index<=0) {
 				gatherFrame.src=gatherFrame.src+"?selectedContents="+escape(getSelectedContents());
 			}else {
@@ -49,7 +50,7 @@
 </head>
 <body  style="overflow:hidden">
 	<button type="button" onclick='alert(getSelectedContents());'>selected</button>
-	<button type="button" onclick='adjustIframeSrc();'>adjustIframeSrc</button>
+	<button type="button" onclick='adjustIframeSrc();'>选择</button>
     <form action="" method="post">
         <input type="text" value="{{ tgt_website }}" name="tgt_website" id="tgt_website">
         <input type="submit" value="Submit">

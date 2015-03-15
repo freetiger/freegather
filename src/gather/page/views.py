@@ -15,12 +15,18 @@ import re
 from django.db import models
 
 #正在分析的入口网址
-gather_site_dict = {}
+gather_data_dict = {}
 #
 
 class GatherData(models.Model):
+    user_id = models.CharField(max_length=32, verbose_name='用户标识') #ip、用户名、sessionid等
     web_site = models.CharField(max_length=1024, verbose_name='入口网址') #类型再修改
     source = models.TextField(default="", verbose_name='入口网址源代码')
+    selected_contents = models.CharField(max_length=1024, verbose_name='选择的页面内容')
+    match_tag_list = [] #选中的html标签
+    selected_rule_list = [] #选中的规则 [[下标,name,attrs],[下标,name,attrs],] 下标为None不用下标定位，所有兄弟节点都进行匹配
+    
+    
     
     
 
@@ -33,8 +39,8 @@ def show_gather_site(request, gather_site_id):
     #后续点击调整时，依据tag中的属性值来模糊匹配整个页面中的同类元素，并依次标红。
     #单独设计翻页元素的提取
     '''
-    soup = gather_site_dict.get(gather_site_id)
-    if soup==None:
+    gatherData = gather_data_dict.get(gather_site_id)
+    if gatherData==None:
         html = "<html><body>竟然出错了.</body></html>" 
     else:
         match_tag_list = []
@@ -42,8 +48,11 @@ def show_gather_site(request, gather_site_id):
         if len(selectedContents)>0:
             temp = selectedContents.replace('%','\\')
             selectedContents = temp.decode( 'unicode-escape' )
-            match_tag_list.extend(find_tags(soup, selectedContents))
+            match_tag_list.extend(find_tags(gatherData.source, selectedContents))
         print match_tag_list
+        gatherData.selected_contents = selectedContents
+        gatherData.match_tag_list = match_tag_list
+        gatherData.selected_rule_list = None #TODO
         '''
         写切换程序，在多个值match_tag_list中选择目标值
         改为完全的dom结构匹配，去除text文本部分匹配
@@ -51,7 +60,7 @@ def show_gather_site(request, gather_site_id):
         for match_tag in match_tag_list:
             #NavigableString ok ，再检查Tag
             #需要改为dom结构去确认页面所选元素的位置。应对翻页
-            new_tag = soup.new_tag("span" )
+            new_tag = gatherData.source.new_tag("span" )
             new_tag.attrs={'name': "selected_1161_span", "style":"border:1px solid red;background-color:red;"}
             if type(match_tag) is NavigableString:
                 match_tag.wrap(new_tag)
@@ -59,7 +68,7 @@ def show_gather_site(request, gather_site_id):
                 for item in match_tag.strings:
                     item.wrap(new_tag)
             
-        html = soup.prettify()
+        html = gatherData.source.prettify()
     #
     return HttpResponse(html)
 
@@ -70,6 +79,7 @@ def find_tags(soup, selectedContents):
     '''
     result_list = []
     need_delete_tag_list = []
+    selectedContents="<html><body>"+selectedContents+"</body></html>"
     selected_soup = BeautifulSoup(selectedContents)
     selected_contents = selected_soup.body.contents
     if len(selected_contents)>0:
@@ -144,7 +154,9 @@ def index(request):
     if htmlsrc.strip()=="":
         htmlsrc = u"<html><body><h1>你输入的网址没找到啊</h1></body></html>"
         soup = BeautifulSoup(htmlsrc)
-        gather_site_dict[gather_site_id] = soup
+        gatherData = GatherData()
+        gatherData.source =soup
+        gather_data_dict[gather_site_id] = gatherData
         context = {"tgt_website": tgt_website, "gatherFrame_src": "/page/show_gather_site/"+str(gather_site_id), }
     else:
         soup = BeautifulSoup(htmlsrc)
@@ -152,7 +164,10 @@ def index(request):
         #有部分网站有防iframe框架设置，如http://www.ablesky.com/lwschool，这类少数网站再改<input id="isAbleskyDomain" type="hidden" value="false">
         #html页面中一些元素的相对路径改为绝对路径
         relative_to_absolute_path(soup, {"link":"href", "script":"src", "img":"src", }, base_url)
-        gather_site_dict[gather_site_id] = soup
+        gatherData = GatherData()
+        gatherData.source =soup
+        gatherData.web_site = tgt_website
+        gather_data_dict[gather_site_id] = gatherData
         context = {"tgt_website": tgt_website, "gatherFrame_src": "/page/show_gather_site/"+str(gather_site_id), }
 
     return render(request, 'gather/page/index.html', context)
