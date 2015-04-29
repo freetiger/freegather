@@ -23,7 +23,10 @@ class GatherData(models.Model):
     web_site = models.CharField(max_length=1024, verbose_name='入口网址') #类型再修改
     source = models.TextField(default="", verbose_name='入口网址源代码')
     selected_contents = models.CharField(max_length=1024, verbose_name='选择的页面内容')
-    match_tag_list = [] #选中的html标签
+    match_tag_list = [] #当前选中的html标签
+    match_tag_index = 0 #当前选中的html标签的位置
+    gatherModel = "equal"#equal or similar
+#     match_tag_type = 
     selected_rule_list = [] #选中的规则 [[下标,name,attrs],[下标,name,attrs],] 下标为None不用下标定位，所有兄弟节点都进行匹配
     
     
@@ -44,33 +47,64 @@ def show_gather_site(request, gather_site_id):
         html = "<html><body>竟然出错了.</body></html>" 
     else:
         match_tag_list = []
-        selectedContents = request.GET.get('selectedContents', default="")
-        if len(selectedContents)>0:
-            temp = selectedContents.replace('%','\\')
-            selectedContents = temp.decode( 'unicode-escape' )
-            match_tag_list.extend(find_tags(gatherData.source, selectedContents))
-        print match_tag_list
-        gatherData.selected_contents = selectedContents
-        gatherData.match_tag_list = match_tag_list
-        gatherData.selected_rule_list = None #TODO
-        '''
-        写切换程序，在多个值match_tag_list中选择目标值
-        改为完全的dom结构匹配，去除text文本部分匹配
-        '''
-        for match_tag in match_tag_list:
-            #NavigableString ok ，再检查Tag
-            #需要改为dom结构去确认页面所选元素的位置。应对翻页
-            new_tag = gatherData.source.new_tag("span" )
-            new_tag.attrs={'name': "selected_1161_span", "style":"border:1px solid red;background-color:red;"}
-            if type(match_tag) is NavigableString:
-                match_tag.wrap(new_tag)
+        adjustSrc = request.GET.get('adjustSrc', default="")
+        gatherModel = request.GET.get('gatherModel', default="equal")
+        soup = gatherData.source
+        remove_red_mark_list = soup.find_all('span', class_='selected_1161_span')
+        for remove_red_mark in remove_red_mark_list:
+            remove_red_mark=remove_red_mark.string
+            print remove_red_mark
+            #remove_red_mark.unwrap()
+        if adjustSrc=='1':#当前选中元素调整，可以模式匹配
+            if gatherModel=='equal':
+                #下一个
+                gatherData.match_tag_index = (gatherData.match_tag_index+1)%len(gatherData.match_tag_list)
+                match_tag = gatherData.match_tag_list[gatherData.match_tag_index]
+                markRedTag(gatherData, match_tag)
             else:
-                for item in match_tag.strings:
-                    item.wrap(new_tag)
+                #当前这个模糊匹配
+                match_tag = gatherData.match_tag_list[gatherData.match_tag_index]
+                if type(match_tag) is NavigableString:
+                    result_list = soup.find_all(name=match_tag.parent.name, attrs=match_tag.parent.attrs)
+                else:
+                    result_list = soup.find_all(name=match_tag.name, attrs=match_tag.attrs)
+                markRedTag(gatherData, result_list)
+        else:
+            selectedContents = request.GET.get('selectedContents', default="")
+            if len(selectedContents)>0:
+                temp = selectedContents.replace('%','\\')
+                selectedContents = temp.decode( 'unicode-escape' )
+                match_tag_list.extend(find_tags(gatherData.source, selectedContents))
+            print match_tag_list
+            gatherData.selected_contents = selectedContents
+            gatherData.match_tag_list = match_tag_list
+            gatherData.selected_rule_list = None #TODO
+            if len(match_tag_list)>0:
+                match_tag = match_tag_list[gatherData.match_tag_index]#gatherData.match_tag_index默认0，先标红第一个，之后再调整
+                markRedTag(gatherData, match_tag)
             
         html = gatherData.source.prettify()
     #
     return HttpResponse(html)
+
+def markRedTag(gatherData, match_tag):
+    match_tag_list=[]
+    if hasattr(match_tag, '__iter__'):
+        match_tag_list.extend(match_tag)
+    else:
+        match_tag_list.append(match_tag)
+    for match_tag in match_tag_list:
+        #NavigableString ok ，再检查Tag
+        #需要改为dom结构去确认页面所选元素的位置。应对翻页
+        new_tag = gatherData.source.new_tag("span" )
+        new_tag.attrs={'name': "selected_1161_span", "class":"selected_1161_span", "style":"border:1px solid red;background-color:red;"}
+        if type(match_tag) is NavigableString:
+            match_tag.wrap(new_tag)
+        else:
+            for item in match_tag.strings:
+                item.wrap(new_tag)
+    
+    
 
 def find_tags(soup, selectedContents):
     '''
@@ -107,19 +141,23 @@ def find_tags(soup, selectedContents):
                 if id(need_delete_tag)==id(result):
                     result_list.remove(result)
                     break
+        #选择的元素是NavigableString将其转化为有dom标签的结构，便于模式匹配。此处直接取父节点
+        if type(current_tag) is NavigableString:
+            for result in result_list:
+                result = result.parent
     return result_list
     
 def equal_blur_text(first_tag, second_tag):
     '''
     判断first_tag和second_tag两个标记Tag是否相等.
-    模糊比较的地方是：1、first_tag的text包含second_tag的text即可。 2、first_tag的子节点可以比second_tag，但是顺序得一致。
+    模糊比较的地方是：1、first_tag的text包含second_tag的text即可。（只在最后的叶子节点NavigableString比较） 2、first_tag的子节点可以比second_tag多，但是顺序得一致。
     '''
     #所有对象可以归纳为4种: Tag , NavigableString , BeautifulSoup , Comment .
     if type(first_tag) is NavigableString and type(second_tag) is NavigableString:
         if first_tag.find(second_tag.strip())>-1:
             return True
         else:
-            return False
+            return False                    
     elif type(first_tag) is Tag and type(second_tag) is Tag:
         #检查当前节点是否一致
         if first_tag.name!=second_tag.name or first_tag.attrs!=second_tag.attrs:

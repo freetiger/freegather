@@ -35,7 +35,7 @@
 		    }
 		}
 		  
-		function adjustIframeSrc() {
+		function selectSrc() {
 			var gatherFrame = document.getElementById("gatherFrame");
 			param_index = gatherFrame.src.indexOf("?selectedContents=");
 			//依据getSelectedContents的值来做什么操作：定位选择的元素、确定调整的元素
@@ -46,11 +46,39 @@
 			}
 			alert(getSelectedContents());
 		}
+		
+		function adjustSrc() {
+			var gatherFrame = document.getElementById("gatherFrame");
+			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
+			var gatherModel = getRadioValue("gatherModel");
+			if(selectedItem.length>0) {
+				gatherFrame.src=gatherFrame.src+"&adjustSrc=1&gatherModel="+gatherModel;
+			}else {
+				alert("没有标红的元素");
+			}
+			alert(getSelectedContents());
+		}
+		
+		function getRadioValue(radioName){
+		    var obj;   
+		    obj=document.getElementsByName(radioName);
+		    if(obj!=null){
+		        var i;
+		        for(i=0;i<obj.length;i++){
+		            if(obj[i].checked){
+		                return obj[i].value;           
+		            }
+		        }
+		    }
+		}
 	</script>
 </head>
 <body  style="overflow:hidden">
 	<button type="button" onclick='alert(getSelectedContents());'>selected</button>
-	<button type="button" onclick='adjustIframeSrc();'>选择</button>
+	<input type="radio" name="gatherModel" value="equal" checked="checked" />精准模式 <input type="radio" name="gatherModel" value="similar" />相似模式
+	
+	<button type="button" onclick='selectSrc();'>选择</button>
+	<button type="button" onclick='adjustSrc();'>调整</button>
     <form action="" method="post">
         <input type="text" value="{{ tgt_website }}" name="tgt_website" id="tgt_website">
         <input type="submit" value="Submit">
