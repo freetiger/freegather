@@ -21,7 +21,8 @@ gather_data_dict = {}
 class GatherData(models.Model):
     user_id = models.CharField(max_length=32, verbose_name='用户标识') #ip、用户名、sessionid等
     web_site = models.CharField(max_length=1024, verbose_name='入口网址') #类型再修改
-    source = models.TextField(default="", verbose_name='入口网址源代码')
+    src_soup = models.TextField(default="", verbose_name='入口网址源代码')
+    soup = models.TextField(default="", verbose_name='当前源代码')
     selected_contents = models.CharField(max_length=1024, verbose_name='选择的页面内容')
     match_tag_list = [] #当前选中的html标签
     match_tag_index = 0 #当前选中的html标签的位置
@@ -29,10 +30,6 @@ class GatherData(models.Model):
 #     match_tag_type = 
     selected_rule_list = [] #选中的规则 [[下标,name,attrs],[下标,name,attrs],] 下标为None不用下标定位，所有兄弟节点都进行匹配
     
-    
-    
-    
-
 def show_gather_site(request, gather_site_id):
     '''
     #<span name="selected_1161_span" style="border:1px solid red;background-color:red;">标红选中元素</span>
@@ -46,48 +43,49 @@ def show_gather_site(request, gather_site_id):
     if gatherData==None:
         html = "<html><body>竟然出错了.</body></html>" 
     else:
-        match_tag_list = []
-        adjustSrc = request.GET.get('adjustSrc', default="")
-        gatherModel = request.GET.get('gatherModel', default="equal")
-        soup = gatherData.source
-        remove_red_mark_list = soup.find_all('span', class_='selected_1161_span')
-        for remove_red_mark in remove_red_mark_list:
-            remove_red_mark=remove_red_mark.string
-            print remove_red_mark
-            #remove_red_mark.unwrap()
-        if adjustSrc=='1':#当前选中元素调整，可以模式匹配
-            if gatherModel=='equal':
-                #下一个
-                gatherData.match_tag_index = (gatherData.match_tag_index+1)%len(gatherData.match_tag_list)
-                match_tag = gatherData.match_tag_list[gatherData.match_tag_index]
-                markRedTag(gatherData, match_tag)
-            else:
-                #当前这个模糊匹配
-                match_tag = gatherData.match_tag_list[gatherData.match_tag_index]
-                if type(match_tag) is NavigableString:
-                    result_list = soup.find_all(name=match_tag.parent.name, attrs=match_tag.parent.attrs)
-                else:
-                    result_list = soup.find_all(name=match_tag.name, attrs=match_tag.attrs)
-                markRedTag(gatherData, result_list)
-        else:
+        match_tag_list = []#?????TODO 匹配集合改改
+        soup = gatherData.soup
+        action = request.GET.get('action', default="")
+        if action=='selectSrc':
+            match_tag_list = []
+            soup=gatherData.src_soup #做新的匹配项前，还原源代码
             selectedContents = request.GET.get('selectedContents', default="")
             if len(selectedContents)>0:
                 temp = selectedContents.replace('%','\\')
                 selectedContents = temp.decode( 'unicode-escape' )
-                match_tag_list.extend(find_tags(gatherData.source, selectedContents))
+                match_tag_list.extend(find_tags(soup, selectedContents))
             print match_tag_list
             gatherData.selected_contents = selectedContents
             gatherData.match_tag_list = match_tag_list
             gatherData.selected_rule_list = None #TODO
             if len(match_tag_list)>0:
                 match_tag = match_tag_list[gatherData.match_tag_index]#gatherData.match_tag_index默认0，先标红第一个，之后再调整
-                markRedTag(gatherData, match_tag)
+                markRedYellowTag(soup, match_tag)
+        elif action=='adjustSrc':
+            #下一个
+            gatherData.match_tag_index = (gatherData.match_tag_index+1)%len(gatherData.match_tag_list)
+            match_tag = gatherData.match_tag_list[gatherData.match_tag_index]
+            markRedYellowTag(soup, match_tag)
+        elif action=='selectSimilar':
+            #当前这个模糊匹配
+            match_tag = gatherData.match_tag_list[gatherData.match_tag_index]
+            if type(match_tag) is NavigableString:
+                result_list = soup.find_all(name=match_tag.parent.name, attrs=match_tag.parent.attrs)
+            else:
+                result_list = soup.find_all(name=match_tag.name, attrs=match_tag.attrs)
+            markRedYellowTag(soup, result_list)
+        elif action=='selectedItem':
+            pass
+        elif action=='submitGather':
+            pass
+        else:
+            pass
             
-        html = gatherData.source.prettify()
+        html = soup.prettify()
     #
     return HttpResponse(html)
 
-def markRedTag(gatherData, match_tag):
+def markRedYellowTag(soup, match_tag):
     match_tag_list=[]
     if hasattr(match_tag, '__iter__'):
         match_tag_list.extend(match_tag)
@@ -96,15 +94,27 @@ def markRedTag(gatherData, match_tag):
     for match_tag in match_tag_list:
         #NavigableString ok ，再检查Tag
         #需要改为dom结构去确认页面所选元素的位置。应对翻页
-        new_tag = gatherData.source.new_tag("span" )
-        new_tag.attrs={'name': "selected_1161_span", "class":"selected_1161_span", "style":"border:1px solid red;background-color:red;"}
+        selected_1161_inject_point = soup.new_tag("selected_1161_inject_point" )
+        #
+        new_tag_mark = soup.new_tag("span" )
+        new_tag_mark.attrs={"class":"selected_1161_inject_span", "style":"border:2px solid red;color:black;background-color:#ffff66"}        
         if type(match_tag) is NavigableString:
-            match_tag.wrap(new_tag)
+            match_tag.wrap(new_tag_mark).wrap(selected_1161_inject_point)
         else:
             for item in match_tag.strings:
-                item.wrap(new_tag)
-    
-    
+                item.wrap(new_tag_mark).wrap(selected_1161_inject_point)
+
+def unmarkRedTag(soup):
+    match_tag_list = soup.find_all(attrs={'class':'selected_1161_inject_span',})
+    for match_tag in match_tag_list:
+        match_tag.style="color:black;background-color:#ffff66;"
+        
+def unmarkRedYellowTag(soup):
+    match_tag_list = soup.find_all("selected_1161_inject_point")
+    for match_tag in match_tag_list:
+        match_tag.span.unwrap()
+           
+
 
 def find_tags(soup, selectedContents):
     '''
@@ -193,17 +203,23 @@ def index(request):
         htmlsrc = u"<html><body><h1>你输入的网址没找到啊</h1></body></html>"
         soup = BeautifulSoup(htmlsrc)
         gatherData = GatherData()
-        gatherData.source =soup
+        gatherData.soup =soup
+        gatherData.src_soup =BeautifulSoup(soup.prettify())
         gather_data_dict[gather_site_id] = gatherData
         context = {"tgt_website": tgt_website, "gatherFrame_src": "/page/show_gather_site/"+str(gather_site_id), }
     else:
-        soup = BeautifulSoup(htmlsrc)
-        base_url = tgt_website
         #有部分网站有防iframe框架设置，如http://www.ablesky.com/lwschool，这类少数网站再改<input id="isAbleskyDomain" type="hidden" value="false">
         #html页面中一些元素的相对路径改为绝对路径
+        base_url = tgt_website
+        src_soup = BeautifulSoup(htmlsrc)#TODO
+        relative_to_absolute_path(src_soup, {"link":"href", "script":"src", "img":"src", }, base_url)
+        #
+        soup = BeautifulSoup(htmlsrc)
         relative_to_absolute_path(soup, {"link":"href", "script":"src", "img":"src", }, base_url)
+        #
         gatherData = GatherData()
-        gatherData.source =soup
+        gatherData.soup =soup
+        gatherData.src_soup =src_soup
         gatherData.web_site = tgt_website
         gather_data_dict[gather_site_id] = gatherData
         context = {"tgt_website": tgt_website, "gatherFrame_src": "/page/show_gather_site/"+str(gather_site_id), }

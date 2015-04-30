@@ -83,7 +83,7 @@ else:
             'PORT': '3306',
             'NAME': 'freegather',
             'USER': 'root',
-            'PASSWORD': '1161hyx',
+            'PASSWORD': '111111',
         }
     }
 

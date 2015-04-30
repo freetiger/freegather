@@ -1,7 +1,7 @@
 <html>
 <head>
     <title>执行抓取任务</title>
-    <script type="text/javascript">
+    <script type="text/javascript">		
 		  function getSelectedContents(){
 		    if (frames["gatherFrame"].window.getSelection) { //chrome,firefox,opera
 		    	if(frames["gatherFrame"].window.getSelection().rangeCount>0) {
@@ -35,29 +35,51 @@
 		    }
 		}
 		  
+		function getUrlWithoutParams(url) {
+			var param_index = url.indexOf("?action=");
+			if(param_index<=0) {
+				return url;
+			}else {
+				return url.substring(0, param_index);
+			}
+		}
 		function selectSrc() {
 			var gatherFrame = document.getElementById("gatherFrame");
-			param_index = gatherFrame.src.indexOf("?selectedContents=");
 			//依据getSelectedContents的值来做什么操作：定位选择的元素、确定调整的元素
-			if(param_index<=0) {
-				gatherFrame.src=gatherFrame.src+"?selectedContents="+escape(getSelectedContents());
-			}else {
-				gatherFrame.src=gatherFrame.src.substring(0, param_index)+"?selectedContents="+escape(getSelectedContents());
-			}
+			gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=selectSrc&selectedContents="+escape(getSelectedContents());
 			alert(getSelectedContents());
 		}
-		
 		function adjustSrc() {
 			var gatherFrame = document.getElementById("gatherFrame");
 			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
-			var gatherModel = getRadioValue("gatherModel");
 			if(selectedItem.length>0) {
-				gatherFrame.src=gatherFrame.src+"&adjustSrc=1&gatherModel="+gatherModel;
+				gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=adjustSrc";
 			}else {
-				alert("没有标红的元素");
+				alert("没有标红的元素，不能作调整");
 			}
-			alert(getSelectedContents());
 		}
+		function selectSimilar() {
+			var gatherFrame = document.getElementById("gatherFrame");
+			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
+			if(selectedItem.length>0) {
+				gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=selectSimilar";
+			}else {
+				alert("没有标红的元素，不能作调整");
+			}
+		}
+		function selectedItem() {
+			var gatherFrame = document.getElementById("gatherFrame");
+			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
+			if(selectedItem.length>0) {
+				gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=selectedItem";
+			}else {
+				alert("没有标红的元素，不能作调整");
+			}
+		}
+		function submitGather() {
+			var gatherFrame = document.getElementById("gatherFrame");
+			gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=submitGather";
+		}		
 		
 		function getRadioValue(radioName){
 		    var obj;   
@@ -71,17 +93,20 @@
 		        }
 		    }
 		}
+		
 	</script>
 </head>
 <body  style="overflow:hidden">
-	<button type="button" onclick='alert(getSelectedContents());'>selected</button>
-	<input type="radio" name="gatherModel" value="equal" checked="checked" />精准模式 <input type="radio" name="gatherModel" value="similar" />相似模式
-	
 	<button type="button" onclick='selectSrc();'>选择</button>
 	<button type="button" onclick='adjustSrc();'>调整</button>
+	<button type="button" onclick='selectSimilar();'>相似</button>
+	<button type="button" onclick='selectedItem();'>确定</button>
+	<button type="button" onclick='submitGather();'>提交</button>
+	
+	
     <form action="" method="post">
         <input type="text" value="{{ tgt_website }}" name="tgt_website" id="tgt_website">
-        <input type="submit" value="Submit">
+        <input type="submit" value="输入网址">
     </form>
     
     <Iframe id="gatherFrame"  name="gatherFrame" scrolling="yes" noresize="" border="0" height="100%" width="100%" src="{{ gatherFrame_src }}"> 
