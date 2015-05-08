@@ -51,8 +51,8 @@
 		}
 		function adjustSrc() {
 			var gatherFrame = document.getElementById("gatherFrame");
-			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
-			if(selectedItem.length>0) {
+			var selectedItem = frames["gatherFrame"].document.getElementById("selected_1161_inject_span");
+			if(selectedItem) {
 				gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=adjustSrc";
 			}else {
 				alert("没有标红的元素，不能作调整");
@@ -60,8 +60,8 @@
 		}
 		function selectSimilar() {
 			var gatherFrame = document.getElementById("gatherFrame");
-			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
-			if(selectedItem.length>0) {
+			var selectedItem = frames["gatherFrame"].document.getElementById("selected_1161_inject_span");
+			if(selectedItem) {
 				gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=selectSimilar";
 			}else {
 				alert("没有标红的元素，不能作调整");
@@ -69,8 +69,8 @@
 		}
 		function selectedItem() {
 			var gatherFrame = document.getElementById("gatherFrame");
-			var selectedItem = frames["gatherFrame"].document.getElementsByName("selected_1161_span");
-			if(selectedItem.length>0) {
+			var selectedItem = frames["gatherFrame"].document.getElementById("selected_1161_inject_span");
+			if(selectedItem) {
 				gatherFrame.src=getUrlWithoutParams(gatherFrame.src)+"?action=selectedItem";
 			}else {
 				alert("没有标红的元素，不能作调整");
